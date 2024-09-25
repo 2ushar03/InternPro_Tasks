@@ -1,0 +1,50 @@
+#include <iostream>
+#include<bits/stdc++.h>
+using namespace std;
+
+int solve(const string& s) {
+    stack<int> st;
+    istringstream s1(s);
+    string s2;
+    while (s1 >> s2) {
+        if (isdigit(s2[0])) {
+            st.push(stoi(s2));
+        } else if (s2.length() == 1 && (s2[0] == '+' || s2[0] == '-' || s2[0] == '*' || s2[0] == '/')) {
+            if (st.size() < 2) {
+                throw runtime_error("Less Values Given in Input");
+            }
+            int sec = st.top(); st.pop();
+            int f = st.top(); st.pop();
+            int ans = 0;
+            switch (s2[0]) {
+                case '+': ans = f + sec; break;
+                case '-': ans = f - sec; break;
+                case '*': ans = f * sec; break;
+                case '/':
+                    if (sec == 0) throw runtime_error("Divide by zero Error.");
+                    ans = f / sec;
+                    break;
+            }
+            st.push(ans);
+        } else {
+            throw invalid_argument("Invalid Value: " + s2);
+        }
+    }
+    if (st.size() != 1) {
+        throw runtime_error("Too many values.");
+    }
+    return st.top();
+}
+
+int main() {
+    string s;
+    cout << "Enter Valid Postfix Expression: ";
+    getline(cin, s);
+    try {
+        int result = solve(s);
+        cout << "Outcome is " << result << endl;
+    } catch (const exception& e) {
+        cout << "You Got an Error: " << e.what() << endl;
+    }
+    return 0;
+}
