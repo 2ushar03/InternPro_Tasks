@@ -1,0 +1,41 @@
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.edge.EdgeDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import java.time.Duration;
+import static org.junit.Assert.assertTrue;
+
+public class SeleniumTest {
+    private WebDriver driver;
+    private WebDriverWait wait;
+    @Before
+    public void setUp() {
+        System.setProperty("webdriver.edge.driver", "C:\\Users\\bbpat\\Downloads\\edgedriver_win64\\msedgedriver.exe");
+        driver = new EdgeDriver();
+        wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+    }
+    @Test
+    public void testGoogleSearch() {
+        driver.get("https://www.google.com");
+        WebElement searchBox = wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("q")));
+        searchBox.sendKeys("Automated Testing");
+        searchBox.submit();
+        wait.until(ExpectedConditions.titleContains("Automated Testing"));
+        assertTrue("Title does not contain 'Automated Testing'", driver.getTitle().contains("Automated Testing"));
+    }
+    @After
+    public void tearDown() {
+        if (driver != null) {
+            try {
+                driver.quit();
+            } catch (Exception e) {
+                System.err.println("Error during driver quit: " + e.getMessage());
+            }
+        }
+    }
+}
