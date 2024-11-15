@@ -1,0 +1,5 @@
+Flask==2.1.1
+mysql-connector-python==8.0.28  # MySQL driver
+requests==2.26.0  # To make HTTP requests to the Product Service
+werkzeug==2.0.3
+gunicorn==20.1.0
