@@ -1,0 +1,112 @@
+services:
+  user-service:
+    build: ./user-service
+    ports:
+      - "5001:5001"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - DB_HOST=db
+      - DB_NAME=user_db
+      - DB_USER=user
+      - DB_PASSWORD=password
+    command: gunicorn -b 0.0.0.0:5001 app:app
+    networks:
+      - microservices-network
+    depends_on:
+      - db
+    restart: always
+
+  product-service:
+    build: ./product-service
+    ports:
+      - "5002:5002"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - DB_HOST=db
+      - DB_NAME=product_db
+      - DB_USER=user
+      - DB_PASSWORD=password
+    command: gunicorn -b 0.0.0.0:5002 app:app
+    networks:
+      - microservices-network
+    depends_on:
+      - db
+    restart: always
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "5003:5003"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=order_db
+    command: gunicorn -b 0.0.0.0:5003 app:app
+    networks:
+      - microservices-network
+    depends_on:
+      - db
+    restart: always
+
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "5004:5004"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - REDIS_HOST=redis
+    command: gunicorn -b 0.0.0.0:5004 app:app
+    networks:
+      - microservices-network
+    depends_on:
+      - redis
+    restart: always
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+    command: gunicorn -b 0.0.0.0:5000 app:app
+    networks:
+      - microservices-network
+    depends_on:
+      - user-service
+      - product-service
+      - order-service
+      - payment-service
+    restart: always
+
+  db:
+    image: postgres:alpine
+    environment:
+      POSTGRES_DB: ecommerce_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: always
+
+  redis:
+    image: redis:alpine
+    networks:
+      - microservices-network
+    restart: always
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
