@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fc;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 0;
+            padding: 15px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 24px;
+        }
+
+        #messages {
+            list-style-type: none;
+            margin: 0;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border-bottom: 2px solid #f1f1f1;
+        }
+
+        #messages li {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 15px;
+            max-width: 80%;
+            word-wrap: break-word;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .user-message {
+            background-color: #d1ffd1;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .other-message {
+            background-color: #f1f1f1;
+            text-align: left;
+        }
+        #message {
+            width: calc(100% - 110px);
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 16px;
+            margin: 10px;
+        }
+
+        #send {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #send:hover {
+            background-color: #45a049;
+        }
+        .room-buttons {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #e8e8e8;
+            border-top: 2px solid #f1f1f1;
+        }
+
+        .room-buttons button {
+            padding: 10px;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .room-buttons button:hover {
+            background-color: #45a049;
+        }
+
+        .current-room {
+            margin: 10px;
+            text-align: center;
+        }
+        .room-status {
+            color: #555;
+            font-size: 14px;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        @media (max-width: 768px) {
+            #send {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+
+            #message {
+                font-size: 14px;
+                padding: 8px;
+            }
+
+            #chat-container {
+                width: 100%;
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <h2>Real-Time Chat</h2>
+        <div id="chat">
+            <ul id="messages"></ul>
+            <input id="message" autocomplete="off" placeholder="Type a message..." />
+            <button id="send">Send</button>
+            <div class="room-buttons">
+                <button id="joinRoom">Join Room</button>
+                <button id="leaveRoom">Leave Room</button>
+            </div>
+            <div id="currentRoom" class="current-room">
+                No room joined
+            </div>
+
+            <div id="room-status" class="room-status"></div>
+        </div>
+    </div>
+    <script>
+        let currentUser = '';
+        let currentRoom = null;
+        window.onload = function() {
+            const username = prompt("Enter your username (user1 or user2):");
+            fetch('/login/' + username)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message === 'Logged in successfully!') {
+                        currentUser = data.username;
+                        console.log(`${currentUser} logged in successfully`);
+                        initializeSocket();
+                    } else {
+                        alert(data.message);
+                    }
+                });
+        }
+        function initializeSocket() {
+            const socket = io.connect('http://127.0.0.1:5000');
+            socket.on('message', function(data) {
+                const msg = data.msg;
+                const sender = data.sender;
+                const li = document.createElement('li');
+                if (sender === currentUser) {
+                    li.textContent = `${sender}: ${msg}`;
+                    li.classList.add('user-message');
+                } else {
+                    li.textContent = `${sender}: ${msg}`;
+                    li.classList.add('other-message');
+                }
+                document.getElementById('messages').appendChild(li);
+                scrollToBottom();
+            });
+            socket.on('status', function(data) {
+                alert(data.msg);
+            });
+            document.getElementById('send').onclick = function() {
+                const message = document.getElementById('message').value;
+                if (currentRoom) {
+                    socket.emit('message', { msg: message, sender: currentUser, room: currentRoom });
+                    document.getElementById('message').value = '';
+                } else {
+                    alert('Please join a room before sending messages.');
+                }
+            };
+            document.getElementById('joinRoom').onclick = function() {
+                const room = prompt("Enter the room name to join:");
+                if (room && room !== currentRoom) {
+                    if (currentRoom) {
+                        socket.emit('leave', currentRoom);
+                    }
+                    socket.emit('join', room);
+                    currentRoom = room;
+                    document.getElementById('currentRoom').textContent = `Joined room: ${currentRoom}`;
+                    document.getElementById('room-status').textContent = `You are in room: ${currentRoom}`;
+                }
+            };
+            document.getElementById('leaveRoom').onclick = function() {
+                if (currentRoom) {
+                    socket.emit('leave', currentRoom);
+                    currentRoom = null;
+                    document.getElementById('currentRoom').textContent = `No room joined`;
+                    document.getElementById('room-status').textContent = '';
+                } else {
+                    alert('You are not in any room.');
+                }
+            };
+        }
+        function scrollToBottom() {
+            const chatContainer = document.getElementById('messages');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+</html>
